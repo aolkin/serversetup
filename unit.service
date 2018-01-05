@@ -1,0 +1,14 @@
+[Unit]
+Description=##description##
+After=network.target
+Requires=multi-user.target
+
+[Service]
+WorkingDirectory=##dir##
+ExecStart=##cmd##
+Restart=always
+User=##name##
+Group=##name##
+
+[Install]
+WantedBy=multi-user.target

@@ -13,6 +13,7 @@ result=$(dialog --title "Setup Actions" \
   "certbot-nginx-domain" "Certbot Setup" on \
   "postgres-name" "Set up a PostgreSQL database" on \
   "git-name-repo" "Clone a git repository" on \
+  "systemd-name-port" "Clone a git repository" on \
   2>&1 1>&3)
 
   # "Git Clone" "Clone a git repository" off \
@@ -33,6 +34,14 @@ if [[ $return_value == $DIALOG_OK ]]; then
 		      --inputbox "Please enter an identifier for the application you are setting up.\n\nThis will be the system username, the sql database, etc, as needed." 0 0)
 	cancel $?
     fi
+    if [[ "$result" == *"systemd"* ]]; then
+	unitf="/etc/systemd/system/$name.service"
+	if [[ -f "$unitf" ]]; then
+	    dialog --title "systemd Unit File Exists" \
+		   --yesno "systemd Unit file $unitf already exists, overwrite?" 0 0
+	    cancel $?
+	fi
+    fi
     if [[ "$result" == *"domain"* ]]; then
 	domain=$(dialog --clear --stdout --title "Virtual Host Domain" \
 		 --inputbox "Please enter the fully-qualified domain name for this virtualhost." 0 0)
@@ -47,7 +56,7 @@ if [[ $return_value == $DIALOG_OK ]]; then
 	fi
     fi
     if [[ "$result" == *"port"* ]]; then
-	port=$(dialog --clear --stdout --title "Proxy Port" \
+	port=$(dialog --clear --stdout --title "Application/Proxy Port" \
 	       --inputbox "Please enter the port the application server should
  run on." 0 0)
 	cancel $?
@@ -55,6 +64,14 @@ if [[ $return_value == $DIALOG_OK ]]; then
     if [[ "$result" == *"repo"* ]]; then
 	repo=$(dialog --clear --stdout --title "Git Remote" \
 	       --inputbox "Please enter the remote URL for the github repository you wish to clone:" 0 0)
+	cancel $?
+    fi
+    if [[ "$result" == *"systemd"* ]]; then
+	cmd=$(dialog --clear --stdout --title "Application Command" \
+	       --inputbox "Please enter the full path and arguments for the command to start at boot.\n\nThe following substitutions will be made:\n##name##\tthe user for the application\n##port##\tthe specified port\n##dir##\tthe application's repository" 0 0)
+	cancel $?
+	desc=$(dialog --clear --stdout --title "Application Unit Description" \
+	       --inputbox "Please enter a description for the systemd unit file:" 0 0)
 	cancel $?
     fi
     if [[ "$result" == *"nginx"* ]]; then
@@ -127,7 +144,19 @@ if [[ $return_value == $DIALOG_OK ]]; then
 	echo
 	echo "Press enter to continue..."
 	read
-	dosudo su - "$name" -c "git clone $repo"
+	dosudo su - "$name" -c "git clone $repo /apps/$name/repo"
+    fi
+    if [[ "$result" == *"systemd"* ]]; then
+	dosudo cp unit.service "$unitf"
+
+	dosudo sed -i "s/##cmd##/$cmd/g" "$unitf"
+	dosudo sed -i "s/##name##/$name/g" "$unitf"
+	dosudo sed -i "s/##port##/$port/g" "$unitf"
+	dosudo sed -i "s/##description##/$desc/g" "$unitf"
+	dosudo sed -i "s/##dir##/\/app\/$name\/repo/g" "$unitf"
+
+	dosudo systemctl daemon-reload
+	dosudo systemctl enable "$name.service"
     fi
 fi
 
