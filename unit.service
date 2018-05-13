@@ -8,7 +8,7 @@ WorkingDirectory=##dir##
 ExecStart=##cmd##
 Restart=always
 User=##name##
-Group=##name##
+#Group=##name##
 
 [Install]
 WantedBy=multi-user.target

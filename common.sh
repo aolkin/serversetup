@@ -8,10 +8,10 @@
 
 function dosudo {
     if [[ "$(whoami)" != "root" ]]; then
-	sudo -n -H $@
+	sudo -n -H "$@"
 	return $?
     else
-	$@
+	"$@"
 	return $?
     fi
 }

@@ -13,11 +13,8 @@ result=$(dialog --title "Setup Actions" \
   "certbot-nginx-domain" "Certbot Setup" on \
   "postgres-name" "Set up a PostgreSQL database" on \
   "git-name-repo" "Clone a git repository" on \
-  "systemd-name-port" "Clone a git repository" on \
+  "systemd-name-port" "Set up a systemd unit" on \
   2>&1 1>&3)
-
-  # "Git Clone" "Clone a git repository" off \
-  # "RabbitMQ Install" "Install RabbitMQ Broker" off \
 
 # Get dialog's exit status
 return_value=$?
@@ -128,7 +125,9 @@ if [[ $return_value == $DIALOG_OK ]]; then
 	dosudo systemctl restart nginx
     fi
     if [[ "$result" == *"certbot"* ]]; then
-	dosudo certbot --nginx -d "$domain"
+	dosudo systemctl stop nginx
+	dosudo certbot --authenticator=standalone --installer=nginx -d "$domain"
+	dosudo systemctl start nginx
     fi
     if [[ "$result" == *"postgres"* ]]; then
 	sqlfile="$(mktemp)"
@@ -136,7 +135,7 @@ if [[ $return_value == $DIALOG_OK ]]; then
 	dosudo su postgres -c psql < "$sqlfile"
     fi
     if [[ "$result" == *"git"* ]]; then
-	dosudo su - "$name" -c "ssh-keygen -A"
+	dosudo su - "$name" -s /bin/sh -c "echo | ssh-keygen"
 	echo
 	echo "$name's public key:"
 	echo
@@ -144,7 +143,9 @@ if [[ $return_value == $DIALOG_OK ]]; then
 	echo
 	echo "Press enter to continue..."
 	read
-	dosudo su - "$name" -c "git clone $repo /apps/$name/repo"
+       	dosudo su - "$name" -s /bin/sh -c "ssh-keygen -R github.com"
+       	dosudo su - "$name" -s /bin/sh -c "ssh-keyscan -H github.com >> /apps/$name/.ssh/known_hosts"
+	dosudo su - "$name" -s /bin/sh -c "git clone --recurse-submodules '$repo' /apps/$name/repo"
     fi
     if [[ "$result" == *"systemd"* ]]; then
 	dosudo cp unit.service "$unitf"
@@ -153,7 +154,7 @@ if [[ $return_value == $DIALOG_OK ]]; then
 	dosudo sed -i "s/##name##/$name/g" "$unitf"
 	dosudo sed -i "s/##port##/$port/g" "$unitf"
 	dosudo sed -i "s/##description##/$desc/g" "$unitf"
-	dosudo sed -i "s/##dir##/\/app\/$name\/repo/g" "$unitf"
+	dosudo sed -i "s/##dir##/\/apps\/$name\/repo/g" "$unitf"
 
 	dosudo systemctl daemon-reload
 	dosudo systemctl enable "$name.service"
