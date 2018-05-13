@@ -53,3 +53,5 @@ if [[ "$(whoami)" != "root" ]]; then
     refreshsudo &
     REFRESHPID=$!
 fi
+
+which dialog >/dev/null || sudo apt install -y dialog
