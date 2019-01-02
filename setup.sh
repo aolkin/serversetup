@@ -84,6 +84,9 @@ if [[ $return_value == $DIALOG_OK ]]; then
 	packages="$packages postgresql"
 	pipages="$pipages psycopg2"
     fi
+    if [[ "$pipages" != "" ]]; then
+	packages="$packages python3-pip"
+    fi
     if [[ "$packages" != "" ]]; then
 	dosudo apt install -y $packages
     fi
