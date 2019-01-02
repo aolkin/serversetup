@@ -72,7 +72,7 @@ if [[ $return_value == $DIALOG_OK ]]; then
 	cancel $?
     fi
     if [[ "$result" == *"nginx"* ]]; then
-	packages="$packages nginx"
+	packages="$packages nginx ssl-cert"
     fi
     if [[ "$result" == *"git"* ]]; then
 	packages="$packages git"
@@ -150,7 +150,7 @@ if [[ $return_value == $DIALOG_OK ]]; then
     if [[ "$result" == *"systemd"* ]]; then
 	dosudo cp unit.service "$unitf"
 
-	dosudo sed -i "s/##cmd##/$cmd/g" "$unitf"
+	dosudo sed -i "s/##cmd##/${cmd//\//\\\/}/g" "$unitf"
 	dosudo sed -i "s/##name##/$name/g" "$unitf"
 	dosudo sed -i "s/##port##/$port/g" "$unitf"
 	dosudo sed -i "s/##description##/$desc/g" "$unitf"
